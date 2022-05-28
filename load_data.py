@@ -36,8 +36,6 @@ class LoadData:
                         image = cv2.imread(file_path, cv2.IMREAD_GRAYSCALE)
 
                         image = cv2.resize(image, (256,256))
-                        cv2.imshow('a',image)
-                        cv2.waitKey(0)
                         images.append(image)
 
                         #extracting labels from files
