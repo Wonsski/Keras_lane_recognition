@@ -1,15 +1,24 @@
 import os
+import numpy as np
+import cv2
+import time
+from datetime import datetime
 
 class LoadData:
     def __init__(self,path):
         self.path=path
-        print(f'Loading data from: {path}')
+        print(f'Dataset folder: {path}')
     
     def getData(self,folders):
         images = []
         labels = []
+        
+        print(f'\nStarted collecting data from folders: {folders}')
+        print(f'Start time: {datetime.now()}\n')
+        print('Status:')
 
         for folder in folders:
+            start = time.time()
             if folder not in os.listdir(self.path):
                 print(f'ERROR: {folder} is not in {self.path}')
                 break
@@ -17,13 +26,21 @@ class LoadData:
             subfolders_path = self.path+f'/{folder}'
             subfolders = os.listdir(subfolders_path)
 
-            print(f'Searching in: {subfolders_path}')
+            print(f'Collecting from: {subfolders_path}')
             for subfolder in subfolders:
                 for file in os.listdir(subfolders_path+f'/{subfolder}'):
                     file_path=subfolders_path+f'/{subfolder}/{file}'
                     
                     if file.endswith('.jpg'):
-                        images.append(file_path)
+                        #image loading and resizing
+                        image = cv2.imread(file_path, cv2.IMREAD_GRAYSCALE)
+
+                        image = cv2.resize(image, (256,256))
+                        cv2.imshow('a',image)
+                        cv2.waitKey(0)
+                        images.append(image)
+
+                        #extracting labels from files
                         label_path = file_path[:-4]+'.lines.txt'
 
                         lines = []
@@ -40,26 +57,57 @@ class LoadData:
                                 lines.append(points)
 
                         labels.append(lines)
-                    
+            end = time.time()
+
+            time_elapsed = end-start
+            print(f'Time elapsed: {int(time_elapsed//60)} min {int(time_elapsed%60)} sec')
+
+        #cohesion handler
         if len(images)!=len(labels):
-            print('ERROR: length of found images list is not the same as labels length')
+            print('ERROR: length of found images list is not the same as labels list length')
             print(f'Found {len(images)} images and {len(labels)} labels')
             return
         
+        print(f'End time: {datetime.now()}')
         print(f'Found {len(images)} items')
+        return images,labels
+    
+    def loadAndSaveData(self,folders,filename,location='data/'):
+        if os.path.exists(f'{location}{filename}.npy'):
+            return self.loadDataFromFile(filename)
+        
+        images,labels = self.getData(folders)
+
+        data = [images,labels]
+
+        if not os.path.exists(location):
+            os.mkdir(location)
+        np.save(f'{location}{filename}.npy',data)
+
+        print(f'Saved data from: {folders} in {location}{filename}.npy')
+
+        return self.loadDataFromFile(filename)
+
+    def loadDataFromFile(self,filename,location='data/'):
+        if not os.path.exists(f'{location}{filename}.npy'):
+            print(f'ERROR: Not found file {location}{filename}.npy')
+
+        images,labels = np.load(f'{location}{filename}.npy', allow_pickle=True)
+        print(f'Successfully loaded data from: {location}{filename}.npy')
+
         return images,labels
 
 if __name__=='__main__':
 
-    #Data folder path
-    data_folder_path = 'E:\CULANE'
+    #Dataset folder path
+    data_folder_path = 'D:\CULANE'
     data = LoadData(data_folder_path)
 
     #Data folders
     train_folders = ['driver_23_30frame','driver_161_90frame','driver_182_30frame']
-    #test_folders = ['driver_37_30frame', 'driver_100_30frame','driver_193_90frame']
+    test_folders = ['driver_37_30frame', 'driver_100_30frame','driver_193_90frame']
 
-    images,labels = data.getData(train_folders)
-    
-    #Print example data
-    print(images[3], labels[3])
+    #Load and save data in data/
+    data.loadAndSaveData(train_folders,'train_data')
+    data.loadAndSaveData(test_folders,'test_data')
+
