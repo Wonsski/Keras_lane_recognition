@@ -2,7 +2,7 @@ import os
 import numpy as np
 import cv2
 import time
-from datetime import datetime
+from tqdm import tqdm
 
 class LoadData:
     def __init__(self,path):
@@ -14,7 +14,6 @@ class LoadData:
         labels = []
         
         print(f'\nStarted collecting data from folders: {folders}')
-        print(f'Start time: {datetime.now()}\n')
         print('Status:')
 
         for folder in folders:
@@ -27,7 +26,7 @@ class LoadData:
             subfolders = os.listdir(subfolders_path)
 
             print(f'Collecting from: {subfolders_path}')
-            for subfolder in subfolders:
+            for subfolder in tqdm(subfolders):
                 for file in os.listdir(subfolders_path+f'/{subfolder}'):
                     file_path=subfolders_path+f'/{subfolder}/{file}'
                     
@@ -66,46 +65,49 @@ class LoadData:
             print(f'Found {len(images)} images and {len(labels)} labels')
             return
         
-        print(f'End time: {datetime.now()}')
         print(f'Found {len(images)} items')
         return images,labels
     
     def loadAndSaveData(self,folders,filename,location='data/'):
-        if os.path.exists(f'{location}{filename}.npy'):
+        if os.path.exists(f'{location}{filename}.npz'):
             return self.loadDataFromFile(filename)
         
         images,labels = self.getData(folders)
 
-        data = [images,labels]
+        data = np.asanyarray([images,labels],dtype=object)
 
         if not os.path.exists(location):
             os.mkdir(location)
-        np.save(f'{location}{filename}.npy',data)
+        
+        print(f'Saving data into {location}{filename}.npz...')
+        np.savez_compressed(f'{location}{filename}.npz',data)
 
-        print(f'Saved data from: {folders} in {location}{filename}.npy')
-
-        return self.loadDataFromFile(filename)
+        print(f'Saved data from: {folders} into {location}{filename}.npz')
+        
+        return images,labels
 
     def loadDataFromFile(self,filename,location='data/'):
-        if not os.path.exists(f'{location}{filename}.npy'):
-            print(f'ERROR: Not found file {location}{filename}.npy')
+        if not os.path.exists(f'{location}{filename}.npz'):
+            print(f'ERROR: Not found file {location}{filename}.npz')
+            return
 
-        images,labels = np.load(f'{location}{filename}.npy', allow_pickle=True)
-        print(f'Successfully loaded data from: {location}{filename}.npy')
+        print(f'Loading data from file: {location}{filename}.npz...')
+        images,labels = np.load(f'{location}{filename}.npz', allow_pickle=True)['arr_0']
+
+        print(f'Successfully loaded data from: {location}{filename}.npz')
 
         return images,labels
 
 if __name__=='__main__':
 
     #Dataset folder path
-    data_folder_path = 'D:\CULANE'
-    data = LoadData(data_folder_path)
+    dataset_folder_path = 'D:\CULANE'
+    data = LoadData(dataset_folder_path)
 
     #Data folders
     train_folders = ['driver_23_30frame','driver_161_90frame','driver_182_30frame']
     test_folders = ['driver_37_30frame', 'driver_100_30frame','driver_193_90frame']
 
     #Load and save data in data/
-    data.loadAndSaveData(train_folders,'train_data')
-    data.loadAndSaveData(test_folders,'test_data')
-
+    x_train, y_train = data.loadAndSaveData(train_folders,'train_data')
+    x_test, y_test = data.loadAndSaveData(test_folders,'test_data')
