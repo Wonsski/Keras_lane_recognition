@@ -35,12 +35,10 @@ class LoadData:
                         image = cv2.imread(file_path, cv2.IMREAD_GRAYSCALE)
 
                         image = cv2.resize(image, (256,256))
-                        images.append(image)
 
                         #extracting labels from files
                         label_path = file_path[:-4]+'.lines.txt'
 
-                        lines = []
                         with open(label_path) as f:
                             for line in f.readlines():
                                 line = line.split()
@@ -51,9 +49,20 @@ class LoadData:
                                     y = line[i+1]
                                     points.append((int(float(x)),int(float(y))))
                                 
-                                lines.append(points)
+                                images.append(image)
 
-                        labels.append(lines)
+                                if(len(points)>0):
+                                    labels.append([
+                                        points[0][0], 
+                                        points[0][1], 
+                                        points[len(points)//2][0], 
+                                        points[len(points)//2][1], 
+                                        points[len(points)-1][0],
+                                        points[len(points)-1][1]
+                                    ])
+                                else:
+                                    labels.append([0]*6)
+
             end = time.time()
 
             time_elapsed = end-start
@@ -94,7 +103,7 @@ class LoadData:
         print(f'Loading data from file: {location}{filename}.npz...')
         images,labels = np.load(f'{location}{filename}.npz', allow_pickle=True)['arr_0']
 
-        print(f'Successfully loaded data from: {location}{filename}.npz')
+        print(f'Successfully loaded data from: {location}{filename}.npz ({len(images)} items)')
 
         return images,labels
 
@@ -111,3 +120,5 @@ if __name__=='__main__':
     #Load and save data in data/
     x_train, y_train = data.loadAndSaveData(train_folders,'train_data')
     x_test, y_test = data.loadAndSaveData(test_folders,'test_data')
+
+    print(x_train[0], y_train[0])
